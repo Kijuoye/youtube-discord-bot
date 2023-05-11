@@ -1,0 +1,5 @@
+pytube
+discord.py
+python-dotenv
+discord.py[voice]
+PyNaCl
