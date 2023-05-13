@@ -1,20 +1,25 @@
 import pytube
 import os
 
-def url_to_mp3(url):
+def url_to_stream(url):
     try:
         yt = pytube.YouTube(url)
-    except:
-        return "Invalid URL"
+    except Exception as e:
+        print(e)
+        return None
     stream = yt.streams.filter(only_audio=True).first()
+    if stream == None:
+        return None
     try:
-        if os.path.exists("audio.mp3"):
-            os.remove("audio.mp3")
-    except PermissionError:
-        return "PermissionError"
-    stream.download(filename="audio.mp3")
-    return "audio.mp3"
+        buff = open("aud", "wb")
+    except Exception as e:
+        print(e)
+        return None
+    stream.stream_to_buffer(buffer=buff)
+    return "aud"
 
 def search_for(keywords):
     s = pytube.Search(keywords)
+    if s == None or len(s.results) == 0:
+        return None
     return s.results[0].watch_url

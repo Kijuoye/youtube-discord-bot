@@ -1,11 +1,12 @@
 # IMPORT DISCORD.PY. ALLOWS ACCESS TO DISCORD'S API.
 import asyncio
+import time
 import discord
 
 # IMPORTS EXTENSIONS FOR COMMANDS
 from discord.ext import commands
 from discord.ext.commands import CommandNotFound
-from url_to_mp3 import url_to_mp3, search_for
+from url_to_mp3 import url_to_stream, search_for
 
 
 # IMPORT THE OS MODULE.
@@ -60,19 +61,30 @@ async def play(ctx, *, keywords):
         print('Connecting to', channel)
         await channel.connect()
 
-    await ctx.send("Looking for the file... :)")
-    url = search_for(str(keywords))
-    source_audio = url_to_mp3(url)
-    if source_audio == "Invalid URL":
-        await ctx.send("Sorry, no results found... :(")
-    elif source_audio == "PermissionError":
+    if ctx.voice_client.is_playing():
         await ctx.send("Sorry, there is a song being played and i can't handle that yet, stop the song and try again... :(")
+        return
+
+    url = search_for(keywords)
+
+    if url ==  None:
+        await ctx.send("Sorry, no results found... :( (Try using +url <url>)")
+        return
     else:
-        try:
-            await ctx.send("Playing: " + str(url))
-            ctx.voice_client.play(discord.FFmpegPCMAudio(executable=os.getenv('FFMPEG_PATH'),source=source_audio))
-        except:
-            await ctx.send("Sorry there was an error opening the file... :(")
+        await ctx.send("Result found! :D")
+
+    f = url_to_stream(url)
+    
+    if f == None:
+        await ctx.send("Sorry there was an error loading the audio... :(")
+        return
+
+    try:
+        await ctx.send("Playing it uwu \n" + str(url))
+        ctx.voice_client.play(discord.FFmpegPCMAudio(executable=os.getenv('FFMPEG_PATH'), source=f))
+    except Exception as e:
+        print(e)
+        await ctx.send("Sorry there was an error loading the audio... :(")
     
 @bot.command()
 async def url(ctx, *, url):
@@ -80,18 +92,23 @@ async def url(ctx, *, url):
         channel = ctx.author.voice.channel
         print('Connecting to', channel)
         await channel.connect()
-    await ctx.send("Looking for the file... :)")
-    source_audio = url_to_mp3(url)
-    if source_audio == "Invalid URL":
-        await ctx.send("Invalid URL, try again... :(")
-    elif source_audio == "PermissionError":
+
+    if ctx.voice_client.is_playing():
         await ctx.send("Sorry, there is a song being played and i can't handle that yet, stop the song and try again... :(")
-    else:
-        try:
-            await ctx.send("Playing: " + str(url))
-            ctx.voice_client.play(discord.FFmpegPCMAudio(executable=os.getenv('FFMPEG_PATH'),source=source_audio))
-        except:
-            await ctx.send("Sorry there was an error opening the file... :(")
+        return
+    
+    f = url_to_stream(url)
+
+    if f == None:
+        await ctx.send("Sorry there was an error loading the audio... :(")
+        return
+    
+    try:
+        await ctx.send("Playing it uwu \n" + str(url))
+        ctx.voice_client.play(discord.FFmpegPCMAudio(executable=os.getenv('FFMPEG_PATH'), source=f))
+    except Exception as e:
+        print(e)
+        await ctx.send("Sorry there was an error loading the audio... :(")
 
 
 @bot.command()
@@ -120,7 +137,7 @@ async def on_voice_state_update(member, before, after):
             time = time + 1
             if voice.is_playing() and not voice.is_paused():
                 time = 0
-            if time == 25:
+            if time == 60:
                 await voice.disconnect()
             if not voice.is_connected():
                 break
