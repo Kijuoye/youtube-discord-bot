@@ -1,3 +1,4 @@
+import asyncio
 import os
 import discord
 from dotenv import load_dotenv
@@ -28,38 +29,61 @@ class MyBot(discord.Client):
         if message.content.startswith('+stop'):
             await self.stop_audio(message)
 
+        if message.content.startswith('+pause'):
+            if self.voice_client:
+                self.voice_client.pause()
+                await message.channel.send("Paused!")
+
+        if message.content.startswith('+resume'):
+            if self.voice_client:
+                self.voice_client.resume()
+                await message.channel.send("Resumed!")
+
+        if message.content.startswith('+queue'):
+            await message.channel.send("Queue: " + str(self.queue))
+
+        if message.content.startswith('+help'):
+            await message.channel.send("Commands:\n\
+                                       +play <keywords>: Plays the first result of a youtube search\n\
+                                        +url <url>: Plays the audio of the video from the url\n\
+                                        +stop: Stops the audio\n\
+                                        +pause: Pauses the audio\n\
+                                        +resume: Resumes the audio\n\
+                                        +queue: Shows the queue\n\
+                                        +help: Shows this message")
+            
+
+    async def on_voice_state_update(self, member, before, after):
+        if not member.id == self.user.id:
+            return
+        elif before.channel is None:
+            voice = after.channel.guild.voice_client
+            time = 0
+            while voice.is_playing():
+                time += 1
+                await asyncio.sleep(1)
+                if voice.is_playing() and not voice.is_paused():
+                    time = 0
+                if time > 60:
+                    await voice.disconnect()
+                if not voice.is_connected():
+                    break
+
     async def play_url(self, message, url):
         if not self.voice_client:
             channel = message.author.voice.channel
             print('Connecting to', channel)
             self.voice_client = await channel.connect()
 
-        if self.voice_client.is_playing():
-            await message.channel.send("Sorry, there is a song being played and I can't handle that yet, stop the song and try again... :(")
-            return
+        await message.channel.send("Added to queue! :D\n" + url)
 
-        f = self.url_to_stream(url)
-
-        if f is None:
-            await message.channel.send("Sorry there was an error loading the audio... :(")
-            return
-
-        try:
-            await message.channel.send("Playing it uwu \n" + str(url))
-            self.voice_client.play(discord.FFmpegPCMAudio(executable=os.getenv('FFMPEG_PATH'), source=f))
-        except Exception as e:
-            print(e)
-            await message.channel.send("Sorry there was an error loading the audio... :(")
+        self.add_to_queue(url)
 
     async def play_audio(self, message, keywords):
         if not self.voice_client:
             channel = message.author.voice.channel
             print('Connecting to', channel)
             self.voice_client = await channel.connect()
-
-        if self.voice_client.is_playing():
-            await message.channel.send("Sorry, there is a song being played and I can't handle that yet, stop the song and try again... :(")
-            return
 
         url = self.search_for(keywords)
 
@@ -75,6 +99,23 @@ class MyBot(discord.Client):
         if self.voice_client:
             self.voice_client.stop()
             await message.channel.send("Stopped!")
+
+    def add_to_queue(self, url):
+        self.queue.append(url)
+        if len(self.queue) == 1:
+            self.play_next()
+
+    def play_next(self):
+        if len(self.queue) == 0:
+            return
+        url = self.queue[0]
+        self.queue = self.queue[1:]
+        self.play_queue(url)
+
+    def play_queue(self, url):
+        if self.voice_client:
+            self.voice_client.play(discord.FFmpegPCMAudio(self.url_to_stream(url), executable="ffmpeg.exe"),
+                                   after=lambda e: self.play_next())
 
     def url_to_stream(self, url):
         try:
@@ -98,6 +139,7 @@ class MyBot(discord.Client):
         if s == None or len(s.results) == 0:
             return None
         return s.results[0].watch_url
+
 
 if __name__ == '__main__':
     load_dotenv()
