@@ -58,7 +58,7 @@ class MyBot(discord.Client):
         elif before.channel is None:
             voice = after.channel.guild.voice_client
             time = 0
-            while voice.is_playing():
+            while True:
                 time += 1
                 await asyncio.sleep(1)
                 if voice.is_playing() and not voice.is_paused():
@@ -100,9 +100,11 @@ class MyBot(discord.Client):
             await message.channel.send("Stopped!")
 
     def add_to_queue(self, url):
-        self.queue.append(url)
-        if len(self.queue) == 1:
+        if len(self.queue) == 0 and not self.voice_client.is_playing():
+            self.queue.append(url)
             self.play_next()
+        else:
+            self.queue.append(url)
 
     def play_next(self):
         if len(self.queue) == 0:
