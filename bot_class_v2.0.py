@@ -40,7 +40,7 @@ class MyBot(discord.Client):
                 await message.channel.send("Resumed!")
 
         if message.content.startswith('+queue'):
-            await message.channel.send("Queue: " + str(self.queue))
+            await message.channel.send("Queue: " + str(self.queue).replace(',', '\n').replace('[', '').replace(']', ''))
 
         if message.content.startswith('+help'):
             await message.channel.send("Commands:\n\
@@ -51,7 +51,6 @@ class MyBot(discord.Client):
                                         +resume: Resumes the audio\n\
                                         +queue: Shows the queue\n\
                                         +help: Shows this message")
-            
 
     async def on_voice_state_update(self, member, before, after):
         if not member.id == self.user.id:
