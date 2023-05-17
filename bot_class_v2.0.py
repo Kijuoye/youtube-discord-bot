@@ -42,6 +42,12 @@ class MyBot(discord.Client):
         if message.content.startswith('+queue'):
             await message.channel.send("Queue: " + str(self.queue).replace(',', '\n').replace('[', '').replace(']', ''))
 
+        if message.content.startswith('+skip'):
+            if self.voice_client:
+                self.voice_client.stop()
+                self.play_next()
+                await message.channel.send("Skipped!")
+
         if message.content.startswith('+help'):
             await message.channel.send("Commands:\n\
                                        +play <keywords>: Plays the first result of a youtube search\n\
@@ -65,7 +71,9 @@ class MyBot(discord.Client):
                     time = 0
                 if time > 60:
                     await voice.disconnect()
+                    self.voice_client = None
                 if not voice.is_connected():
+                    self.voice_client = None
                     break
 
     async def play_url(self, message, url):
@@ -115,24 +123,25 @@ class MyBot(discord.Client):
 
     def play_queue(self, url):
         if self.voice_client:
-            self.voice_client.play(discord.FFmpegPCMAudio(self.url_to_stream(url), executable="ffmpeg.exe"),
+            audio = self.url_to_stream(url)
+            if audio is None:
+                return
+            self.voice_client.play(discord.FFmpegPCMAudio(audio, executable="ffmpeg.exe"),
                                    after=lambda e: self.play_next())
 
     def url_to_stream(self, url):
         try:
             yt = pytube.YouTube(url)
-        except Exception as e:
-            print(e)
-            return None
-        stream = yt.streams.filter(only_audio=True).first()
-        if stream == None:
-            return None
-        try:
+        
+            stream = yt.streams.filter(only_audio=True).first()
             buff = open("aud", "wb")
+            stream.stream_to_buffer(buffer=buff)
+
         except Exception as e:
             print(e)
             return None
-        stream.stream_to_buffer(buffer=buff)
+        
+        buff.close()
         return "aud"
 
     def search_for(self, keywords):
