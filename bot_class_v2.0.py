@@ -60,6 +60,7 @@ class MyBot(discord.Client):
         if message.content.startswith('+skip'):
             if self.voice_client:
                 self.voice_client.stop()
+                self.loop_audio = False
                 self.play_next()
                 await message.channel.send("Skipped!")
 
