@@ -10,6 +10,7 @@ class MyBot(discord.Client):
         super().__init__(intents=intents)
         self.voice_client = None
         self.queue = []
+        self.loop_audio = False 
 
     async def on_ready(self):
         print('Logged in as', self.user.name)
@@ -24,7 +25,10 @@ class MyBot(discord.Client):
 
         if message.content.startswith('+url'):
             url = message.content[4:]
-            await self.play_url(message, url)
+            if not str(url).replace(' ', '').startswith(('https://www.youtube.com/', 'https://youtu.be/')):
+                await message.channel.send("Invalid url! (Try using +play <keywords>)")
+            else:
+                await self.play_url(message, url)
 
         if message.content.startswith('+stop'):
             await self.stop_audio(message)
@@ -40,7 +44,18 @@ class MyBot(discord.Client):
                 await message.channel.send("Resumed!")
 
         if message.content.startswith('+queue'):
-            await message.channel.send("Queue: " + str(self.queue).replace(',', '\n').replace('[', '').replace(']', ''))
+            if len(self.queue) == 0:
+                await message.channel.send("Queue is empty!")
+            else:
+                await message.channel.send("Queue: " + str(self.queue).replace(',', '\n').replace('[', '').replace(']', ''))
+
+        if message.content.startswith('+loop'):
+            if self.loop_audio:
+                self.loop_audio = False
+                await message.channel.send("Looping disabled!")
+            else:
+                self.loop_audio = True
+                await message.channel.send("Looping enabled!")
 
         if message.content.startswith('+skip'):
             if self.voice_client:
@@ -56,6 +71,7 @@ class MyBot(discord.Client):
                                         +pause: Pauses the audio\n\
                                         +resume: Resumes the audio\n\
                                         +queue: Shows the queue\n\
+                                        +skip: Skips the current song\n\
                                         +help: Shows this message")
 
     async def on_voice_state_update(self, member, before, after):
@@ -126,8 +142,10 @@ class MyBot(discord.Client):
             audio = self.url_to_stream(url)
             if audio is None:
                 return
-            self.voice_client.play(discord.FFmpegPCMAudio(audio, executable="ffmpeg.exe"),
-                                   after=lambda e: self.play_next())
+            if self.loop_audio:
+                self.voice_client.play(discord.FFmpegPCMAudio(audio, executable="ffmpeg.exe"), after=lambda e: self.play_queue(url))
+            else:
+                self.voice_client.play(discord.FFmpegPCMAudio(audio, executable="ffmpeg.exe"), after=lambda e: self.play_next())
 
     def url_to_stream(self, url):
         try:
@@ -148,7 +166,7 @@ class MyBot(discord.Client):
         s = pytube.Search(keywords)
         if s == None or len(s.results) == 0:
             return None
-        return s.results[0].watch_url
+        return str(s.results[0].watch_url)
 
 
 if __name__ == '__main__':
