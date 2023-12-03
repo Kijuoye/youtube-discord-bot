@@ -10,46 +10,56 @@ class MyBot(discord.Client):
         super().__init__(intents=intents)
         self.voice_client = None
         self.queue = []
-        self.loop_audio = False 
+        self.loop_audio = False
 
     async def on_ready(self):
-        print('Logged in as', self.user.name)
+        print("Logged in as", self.user.name)
 
     async def on_message(self, message):
         if message.author == self.user:
             return
 
-        if message.content.startswith('+play'):
+        if message.content.startswith("+play"):
             keywords = message.content[5:]
             await self.play_audio(message, keywords)
 
-        if message.content.startswith('+url'):
+        if message.content.startswith("+url"):
             url = message.content[4:]
-            if not str(url).replace(' ', '').startswith(('https://www.youtube.com/', 'https://youtu.be/')):
+            if (
+                not str(url)
+                .replace(" ", "")
+                .startswith(("https://www.youtube.com/", "https://youtu.be/"))
+            ):
                 await message.channel.send("Invalid url! (Try using +play <keywords>)")
             else:
                 await self.play_url(message, url)
 
-        if message.content.startswith('+stop'):
+        if message.content.startswith("+stop"):
             await self.stop_audio(message)
 
-        if message.content.startswith('+pause'):
+        if message.content.startswith("+pause"):
             if self.voice_client:
                 self.voice_client.pause()
                 await message.channel.send("Paused!")
 
-        if message.content.startswith('+resume'):
+        if message.content.startswith("+resume"):
             if self.voice_client:
                 self.voice_client.resume()
                 await message.channel.send("Resumed!")
 
-        if message.content.startswith('+queue'):
+        if message.content.startswith("+queue"):
             if len(self.queue) == 0:
                 await message.channel.send("Queue is empty!")
             else:
-                await message.channel.send("Queue: " + str(self.queue).replace(',', '\n').replace('[', '').replace(']', ''))
+                await message.channel.send(
+                    "Queue: "
+                    + str(self.queue)
+                    .replace(",", "\n")
+                    .replace("[", "")
+                    .replace("]", "")
+                )
 
-        if message.content.startswith('+loop'):
+        if message.content.startswith("+loop"):
             if self.loop_audio:
                 self.loop_audio = False
                 await message.channel.send("Looping disabled!")
@@ -57,23 +67,35 @@ class MyBot(discord.Client):
                 self.loop_audio = True
                 await message.channel.send("Looping enabled!")
 
-        if message.content.startswith('+skip'):
+        if message.content.startswith("+skip"):
             if self.voice_client:
                 self.voice_client.stop()
                 self.loop_audio = False
                 self.play_next()
                 await message.channel.send("Skipped!")
 
-        if message.content.startswith('+help'):
-            await message.channel.send("Commands:\n\
-                                       +play <keywords>: Plays the first result of a youtube search\n\
-                                        +url <url>: Plays the audio of the video from the url\n\
-                                        +stop: Stops the audio\n\
-                                        +pause: Pauses the audio\n\
-                                        +resume: Resumes the audio\n\
-                                        +queue: Shows the queue\n\
-                                        +skip: Skips the current song\n\
-                                        +help: Shows this message")
+        if message.content.startswith("+ramranch"):
+            await message.channel.send(
+                "18 naked cowboys in the showers at Ram Ranch!\n"
+                "Big hard throbbing cocks wanting to be sucked!\n"
+            )
+            await self.play_url(
+                message,
+                "https://www.youtube.com/watch?v=39lPHHvkzYg&pp=ygUJcmFtIHJhbmNo",
+            )
+
+        if message.content.startswith("+help"):
+            await message.channel.send(
+                "Commands:\n"
+                "+play <keywords>: Plays the first result of a youtube search\n"
+                "+url <url>: Plays the audio of the video from the url\n"
+                "+stop: Stops the audio\n"
+                "+pause: Pauses the audio\n"
+                "+resume: Resumes the audio\n"
+                "+queue: Shows the queue\n"
+                "+skip: Skips the current song\n"
+                "+help: Shows this message"
+            )
 
     async def on_voice_state_update(self, member, before, after):
         if not member.id == self.user.id:
@@ -96,7 +118,7 @@ class MyBot(discord.Client):
     async def play_url(self, message, url):
         if not self.voice_client:
             channel = message.author.voice.channel
-            print('Connecting to', channel)
+            print("Connecting to", channel)
             self.voice_client = await channel.connect()
 
         await message.channel.send("Added to queue! :D\n" + url)
@@ -106,13 +128,15 @@ class MyBot(discord.Client):
     async def play_audio(self, message, keywords):
         if not self.voice_client:
             channel = message.author.voice.channel
-            print('Connecting to', channel)
+            print("Connecting to", channel)
             self.voice_client = await channel.connect()
 
         url = self.search_for(keywords)
 
         if url is None:
-            await message.channel.send("Sorry, no results found... :( (Try using +url <url>)")
+            await message.channel.send(
+                "Sorry, no results found... :( (Try using +url <url>)"
+            )
             return
         else:
             await message.channel.send("Result found! :D")
@@ -144,14 +168,20 @@ class MyBot(discord.Client):
             if audio is None:
                 return
             if self.loop_audio:
-                self.voice_client.play(discord.FFmpegPCMAudio(audio, executable="ffmpeg.exe"), after=lambda e: self.play_queue(url))
+                self.voice_client.play(
+                    discord.FFmpegPCMAudio(audio, executable="ffmpeg.exe"),
+                    after=lambda e: self.play_queue(url),
+                )
             else:
-                self.voice_client.play(discord.FFmpegPCMAudio(audio, executable="ffmpeg.exe"), after=lambda e: self.play_next())
+                self.voice_client.play(
+                    discord.FFmpegPCMAudio(audio, executable="ffmpeg.exe"),
+                    after=lambda e: self.play_next(),
+                )
 
     def url_to_stream(self, url):
         try:
             yt = pytube.YouTube(url)
-        
+
             stream = yt.streams.filter(only_audio=True).first()
             buff = open("aud", "wb")
             stream.stream_to_buffer(buffer=buff)
@@ -159,20 +189,20 @@ class MyBot(discord.Client):
         except Exception as e:
             print(e)
             return None
-        
+
         buff.close()
         return "aud"
 
     def search_for(self, keywords):
         s = pytube.Search(keywords)
-        if s == None or len(s.results) == 0:
+        if s is None or len(s.results) == 0:
             return None
         return str(s.results[0].watch_url)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     load_dotenv()
     intents = discord.Intents.default()
     intents.message_content = True
     bot = MyBot(intents=intents)
-    bot.run(os.getenv('DISCORD_TOKEN'))
+    bot.run(os.getenv("DISCORD_TOKEN"))
