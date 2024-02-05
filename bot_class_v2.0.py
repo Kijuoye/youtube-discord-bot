@@ -1,11 +1,9 @@
 import asyncio
-import json
 import os
 
 import discord
 import pytube
 from dotenv import load_dotenv
-from riotwatcher import LolWatcher
 
 
 class MyBot(discord.Client):
@@ -14,10 +12,6 @@ class MyBot(discord.Client):
         self.voice_client = None
         self.queue = []
         self.loop_audio = False
-        self.lol_watcher = LolWatcher(os.getenv("RIOT_API_KEY"))
-        self.my_region = "EUW1"
-        self.last_version_lol = self.lol_watcher.data_dragon.versions_all()[0]
-        self.id_to_champion = json.load(open("champion_id_to_name.json", closefd=True))
 
     async def on_ready(self):
         print("Logged in as", self.user.name)
@@ -91,53 +85,6 @@ class MyBot(discord.Client):
                 "https://www.youtube.com/watch?v=39lPHHvkzYg&pp=ygUJcmFtIHJhbmNo",
             )
 
-        if message.content.startswith("+rank"):
-            try:
-                summoner_name = message.content[5:]
-                summoner = self.lol_watcher.summoner.by_name(
-                    self.my_region, summoner_name
-                )
-                summoner_rank = self.lol_watcher.league.by_summoner(
-                    self.my_region, summoner["id"]
-                )
-            except Exception:
-                await message.channel.send("Summoner not found!")
-                return
-            else:
-                await message.channel.send(
-                    summoner_name
-                    + " is "
-                    + summoner_rank[0]["tier"]
-                    + " "
-                    + summoner_rank[0]["rank"]
-                )
-
-        if message.content.startswith("+masteries"):
-            try:
-                summoner_name = message.content[10:]
-                summoner = self.lol_watcher.summoner.by_name(
-                    self.my_region, summoner_name
-                )
-                summoner_masteries = self.lol_watcher.champion_mastery.by_summoner(
-                    self.my_region, summoner["id"]
-                )
-            except Exception:
-                await message.channel.send("Summoner not found!")
-                return
-            else:
-                await message.channel.send(
-                    summoner_name
-                    + " top 5 champions:\n "
-                    + str(
-                        [
-                            self.id_to_champion[str(champion["championId"])]
-                            + ": "
-                            + str(champion["championPoints"])
-                            for champion in summoner_masteries[:5]
-                        ]
-                    ).replace("'", "").replace(",", "\n").replace("[", "").replace("]", "")
-                )
-
         if message.content.startswith("+help"):
             await message.channel.send(
                 "Commands:\n"
@@ -151,7 +98,6 @@ class MyBot(discord.Client):
                 "+help: Shows this message\n"
                 "+loop: Loops the current song\n"
                 "+ramranch: Plays Ram Ranch\n"
-                "+rank <summoner name>: Shows the rank of the summoner\n"
             )
 
     async def on_voice_state_update(self, member, before, after):
