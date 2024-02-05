@@ -1,12 +1,9 @@
-import asyncio
-import os
-
 import discord
 import pytube
-from dotenv import load_dotenv
+import asyncio
 
 
-class MyBot(discord.Client):
+class YTBot(discord.Client):
     def __init__(self, intents):
         super().__init__(intents=intents)
         self.voice_client = None
@@ -120,20 +117,18 @@ class MyBot(discord.Client):
 
     async def play_url(self, message, url):
         if not self.voice_client:
+            if not message.author.voice:
+                await message.channel.send("You are not in a voice channel!")
+                return
             channel = message.author.voice.channel
             print("Connecting to", channel)
             self.voice_client = await channel.connect()
 
-        await message.channel.send("Added to queue! :D\n" + url)
+        await message.channel.send("Added to queue! --> \n" + url)
 
         self.add_to_queue(url)
 
     async def play_audio(self, message, keywords):
-        if not self.voice_client:
-            channel = message.author.voice.channel
-            print("Connecting to", channel)
-            self.voice_client = await channel.connect()
-
         url = self.search_for(keywords)
 
         if url is None:
@@ -201,11 +196,3 @@ class MyBot(discord.Client):
         if s is None or len(s.results) == 0:
             return None
         return str(s.results[0].watch_url)
-
-
-if __name__ == "__main__":
-    load_dotenv()
-    intents = discord.Intents.default()
-    intents.message_content = True
-    bot = MyBot(intents=intents)
-    bot.run(os.getenv("DISCORD_TOKEN"))
