@@ -9,7 +9,13 @@ if __name__ == "__main__":
     load_dotenv()
     intents = discord.Intents.default()
     intents.message_content = True
-    bot = YTBot(intents=intents)
+    bot = YTBot(
+        intents=intents,
+        hugchat_credentials=(
+            os.getenv("EMAIL_HUGGINGFACE"),
+            os.getenv("PASS_HUGGINGFACE"),
+        ),
+    )
     try:
         bot.run(os.getenv("DISCORD_TOKEN"))
     except TypeError:

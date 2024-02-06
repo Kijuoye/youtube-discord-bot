@@ -1,14 +1,21 @@
 import discord
 import pytube
 import asyncio
+from hugchat import hugchat
+from hugchat.login import Login
 
 
 class YTBot(discord.Client):
-    def __init__(self, intents):
+    def __init__(self, intents, hugchat_credentials):
         super().__init__(intents=intents)
         self.voice_client = None
         self.queue = []
         self.loop_audio = False
+        if hugchat_credentials:
+            self.chatbot = self.create_chatbot(hugchat_credentials)
+        else:
+            self.chatbot = None
+            print("Chatbot not created!")
 
     async def on_ready(self):
         print("Logged in as", self.user.name)
@@ -20,8 +27,7 @@ class YTBot(discord.Client):
         if message.content.startswith("+play"):
             keywords = message.content[5:]
             await self.play_audio(message, keywords)
-
-        if message.content.startswith("+url"):
+        elif message.content.startswith("+url"):
             url = message.content[4:]
             if (
                 not str(url)
@@ -31,21 +37,17 @@ class YTBot(discord.Client):
                 await message.channel.send("Invalid url! (Try using +play <keywords>)")
             else:
                 await self.play_url(message, url)
-
-        if message.content.startswith("+stop"):
+        elif message.content.startswith("+stop"):
             await self.stop_audio(message)
-
-        if message.content.startswith("+pause"):
+        elif message.content.startswith("+pause"):
             if self.voice_client:
                 self.voice_client.pause()
                 await message.channel.send("Paused!")
-
-        if message.content.startswith("+resume"):
+        elif message.content.startswith("+resume"):
             if self.voice_client:
                 self.voice_client.resume()
                 await message.channel.send("Resumed!")
-
-        if message.content.startswith("+queue"):
+        elif message.content.startswith("+queue"):
             if len(self.queue) == 0:
                 await message.channel.send("Queue is empty!")
             else:
@@ -56,23 +58,20 @@ class YTBot(discord.Client):
                     .replace("[", "")
                     .replace("]", "")
                 )
-
-        if message.content.startswith("+loop"):
+        elif message.content.startswith("+loop"):
             if self.loop_audio:
                 self.loop_audio = False
                 await message.channel.send("Looping disabled!")
             else:
                 self.loop_audio = True
                 await message.channel.send("Looping enabled!")
-
-        if message.content.startswith("+skip"):
+        elif message.content.startswith("+skip"):
             if self.voice_client:
                 self.voice_client.stop()
                 self.loop_audio = False
                 self.play_next()
                 await message.channel.send("Skipped!")
-
-        if message.content.startswith("+ramranch"):
+        elif message.content.startswith("+ramranch"):
             await message.channel.send(
                 "18 naked cowboys in the showers at Ram Ranch!\n"
                 "Big hard throbbing cocks wanting to be sucked!\n"
@@ -81,8 +80,15 @@ class YTBot(discord.Client):
                 message,
                 "https://www.youtube.com/watch?v=39lPHHvkzYg&pp=ygUJcmFtIHJhbmNo",
             )
-
-        if message.content.startswith("+help"):
+        elif message.content.startswith("+chat"):
+            message.content = message.content[5:]
+            await self.chat(message)
+        elif message.content.startswith("+newchat"):
+            await self.new_chat(message)
+        # Silly command just in case...
+        elif message.content.startswith("+deletechats_123321"):
+            await self.delete_chats(message)
+        elif message.content.startswith("+help"):
             await message.channel.send(
                 "Commands:\n"
                 "+play <keywords>: Plays the first result of a youtube search\n"
@@ -95,7 +101,47 @@ class YTBot(discord.Client):
                 "+help: Shows this message\n"
                 "+loop: Loops the current song\n"
                 "+ramranch: Plays Ram Ranch\n"
+                "+chat: Starts a conversation with the chatbot\n"
+                "+newchat: Starts a new conversation with the chatbot\n"
             )
+        elif message.content.startswith("+"):
+            await message.channel.send(
+                "Was that meant to be a command? Because if that's the case, maaaan I have no idea what you are waiting for me to do :/"
+            )
+
+    async def chat(self, message):
+        if self.chatbot:
+            try:
+                response = self.chatbot.chat(message.content)
+                response.wait_until_done()
+            except Exception as e:
+                print("Failed to chat:", e)
+                response = "Sorry, I'm not feeling well... :("
+            response_length = len(response.text)
+            if response_length > 2000:
+                messages = [
+                    response.text[i : i + 2000] for i in range(0, response_length, 2000)
+                ]
+                for m in messages:
+                    await message.channel.send(m)
+            else:
+                await message.channel.send(response.text)
+        else:
+            await message.channel.send("I'm not in the mood to chat... :(")
+
+    async def new_chat(self, message):
+        if self.chatbot:
+            chat_id = self.chatbot.new_conversation()
+            self.chatbot.change_conversation(chat_id)
+        else:
+            await message.channel.send("I'm not in the mood to chat... :(")
+
+    async def delete_chats(self, message):
+        # WARNING: This will delete all conversations
+        if self.chatbot:
+            self.chatbot.delete_all_conversations()
+        else:
+            await message.channel.send("I'm not in the mood to chat... :(")
 
     async def on_voice_state_update(self, member, before, after):
         if not member.id == self.user.id:
@@ -196,3 +242,16 @@ class YTBot(discord.Client):
         if s is None or len(s.results) == 0:
             return None
         return str(s.results[0].watch_url)
+
+    def create_chatbot(self, credentials):
+        try:
+            email, passwd = credentials
+            sign = Login(email, passwd)
+            cookies = sign.login()
+            cookie_path_dir = "./cookies_snapshot"
+            sign.saveCookiesToDir(cookie_path_dir)
+            chatbot = hugchat.ChatBot(cookies=cookies.get_dict())
+        except Exception as e:
+            print("Failed to create chatbot:", e)
+            chatbot = None
+        return chatbot
