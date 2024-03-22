@@ -11,7 +11,7 @@ def main():
 
     Load the environment variables and run the bot.
     """
-    load_dotenv()
+    load_dotenv(override=False)
     intents = discord.Intents.default()
     intents.message_content = True
     bot = YTBot(

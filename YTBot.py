@@ -303,12 +303,12 @@ class YTBot(discord.Client):
                 return
             if self.loop_audio:
                 self.voice_client.play(
-                    discord.FFmpegPCMAudio(audio, executable="ffmpeg.exe"),
+                    discord.FFmpegPCMAudio(audio, executable="ffmpeg"),
                     after=lambda e: self.play_queue(url),
                 )
             else:
                 self.voice_client.play(
-                    discord.FFmpegPCMAudio(audio, executable="ffmpeg.exe"),
+                    discord.FFmpegPCMAudio(audio, executable="ffmpeg"),
                     after=lambda e: self.play_next(),
                 )
 

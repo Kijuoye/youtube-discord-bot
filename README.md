@@ -6,7 +6,6 @@ This repository contains a Discord bot that allows you to interact with YouTube 
 
 Before running the bot, make sure you have the following:
 
-- FFmpeg: Download and install FFmpeg, and set the `FFMPEG_PATH` environment variable to its location.
 - Discord Bot Token: Export your Discord bot token as `DISCORD_TOKEN`.
 - Hugginface Credentials: Export your hugginface email and password as `EMAIL_HUGGINGFACE` and `PASS_HUGGINGFACE`. (Optional)
 
@@ -16,7 +15,7 @@ To get started with the Discord bot, follow these steps:
 
 1. Clone this repository to your local machine.
 2. Install the required dependencies using `pip install -r requirements.txt`.
-3. Set the necessary environment variables (`FFMPEG_PATH` and `DISCORD_TOKEN`).
+3. Set the necessary environment variables (`DISCORD_TOKEN`).
 4. Run the bot using the `main.py` file.
 
 ## Usage
