@@ -19,6 +19,7 @@ class YTBot(discord.Client):
         loop_audio (bool): Whether the audio should be looped.
         chatbot (hugchat.ChatBot): The chatbot for the bot.
     """
+
     def __init__(self, intents, hugchat_credentials=None):
         """
         Initializes the bot.
@@ -63,7 +64,9 @@ class YTBot(discord.Client):
                 .replace(" ", "")
                 .startswith(("https://www.youtube.com/", "https://youtu.be/"))
             ):
-                await message.channel.send("Invalid url! (Try using +play <keywords>)")
+                await message.channel.send(
+                    "Invalid url! (Try using +play <keywords>)"
+                )
             else:
                 await self.play_url(message, url)
         elif message.content.startswith("+stop"):
@@ -155,7 +158,8 @@ class YTBot(discord.Client):
             response_length = len(response.text)
             if response_length > 2000:
                 messages = [
-                    response.text[i : i + 2000] for i in range(0, response_length, 2000)
+                    response.text[i : i + 2000]
+                    for i in range(0, response_length, 2000)
                 ]
                 for m in messages:
                     await message.channel.send(m)
