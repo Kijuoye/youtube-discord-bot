@@ -8,6 +8,7 @@ Before running the bot, make sure you have the following:
 
 - FFmpeg: Download and install FFmpeg, and set the `FFMPEG_PATH` environment variable to its location.
 - Discord Bot Token: Export your Discord bot token as `DISCORD_TOKEN`.
+- Hugginface Credentials: Export your hugginface email and password as `EMAIL_HUGGINGFACE` and `PASS_HUGGINGFACE`. (Optional)
 
 ## Getting Started
 

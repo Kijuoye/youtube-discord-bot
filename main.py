@@ -26,5 +26,6 @@ def main():
     except TypeError:
         print("Discord token is invalid! (Check .env file)")
 
+
 if __name__ == "__main__":
     main()
