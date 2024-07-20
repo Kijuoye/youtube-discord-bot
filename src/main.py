@@ -16,10 +16,6 @@ def main():
     intents.message_content = True
     bot = YTBot(
         intents=intents,
-        hugchat_credentials=(
-            os.getenv("EMAIL_HUGGINGFACE"),
-            os.getenv("PASS_HUGGINGFACE"),
-        ),
     )
     try:
         bot.run(os.getenv("DISCORD_TOKEN"))

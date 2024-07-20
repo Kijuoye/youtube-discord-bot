@@ -1,5 +1,5 @@
 import discord
-import pytube
+import pytubefix as pytube
 import asyncio
 from hugchat import hugchat
 from hugchat.login import Login
@@ -37,6 +37,22 @@ class YTBot(discord.Client):
         else:
             self.chatbot = None
             print("Chatbot not created!")
+        self.commands = {
+            "+play ": self.handle_play,
+            "+url ": self.handle_url,
+            "+stop": self.handle_stop,
+            "+pause": self.handle_pause,
+            "+resume": self.handle_resume,
+            "+queue": self.handle_queue,
+            "+loop": self.handle_loop,
+            "+skip": self.handle_skip,
+            "+ramranch": self.handle_ramranch,
+            "+chat ": self.handle_chat,
+            "+newchat": self.handle_new_chat,
+            "+deletechats_123321": self.handle_delete_chats,
+            "+help": self.handle_help,
+            "+playlist ": self.handle_playlist,
+        }
 
     async def on_ready(self):
         """
@@ -54,92 +70,16 @@ class YTBot(discord.Client):
         if message.author == self.user:
             return
 
-        if message.content.startswith("+play"):
-            keywords = message.content[5:]
-            await self.play_audio(message, keywords)
-        elif message.content.startswith("+url"):
-            url = message.content[4:]
-            if (
-                not str(url)
-                .replace(" ", "")
-                .startswith(("https://www.youtube.com/", "https://youtu.be/"))
-            ):
-                await message.channel.send(
-                    "Invalid url! (Try using +play <keywords>)"
-                )
-            else:
-                await self.play_url(message, url)
-        elif message.content.startswith("+stop"):
-            await self.stop_audio(message)
-        elif message.content.startswith("+pause"):
-            if self.voice_client:
-                self.voice_client.pause()
-                await message.channel.send("Paused!")
-        elif message.content.startswith("+resume"):
-            if self.voice_client:
-                self.voice_client.resume()
-                await message.channel.send("Resumed!")
-        elif message.content.startswith("+queue"):
-            if len(self.queue) == 0:
-                await message.channel.send("Queue is empty!")
-            else:
-                await message.channel.send(
-                    "Queue: "
-                    + str(self.queue)
-                    .replace(",", "\n")
-                    .replace("[", "")
-                    .replace("]", "")
-                )
-        elif message.content.startswith("+loop"):
-            if self.loop_audio:
-                self.loop_audio = False
-                await message.channel.send("Looping disabled!")
-            else:
-                self.loop_audio = True
-                await message.channel.send("Looping enabled!")
-        elif message.content.startswith("+skip"):
-            if self.voice_client:
-                self.voice_client.stop()
-                self.loop_audio = False
-                self.play_next()
-                await message.channel.send("Skipped!")
-        elif message.content.startswith("+ramranch"):
-            await message.channel.send(
-                "18 naked cowboys in the showers at Ram Ranch!\n"
-                "Big hard throbbing cocks wanting to be sucked!\n"
-            )
-            await self.play_url(
-                message,
-                "https://www.youtube.com/watch?v=39lPHHvkzYg&pp=ygUJcmFtIHJhbmNo",
-            )
-        elif message.content.startswith("+chat"):
-            message.content = message.content[5:]
-            await self.chat(message)
-        elif message.content.startswith("+newchat"):
-            await self.new_chat(message)
-        # Silly command just in case...
-        elif message.content.startswith("+deletechats_123321"):
-            await self.delete_chats(message)
-        elif message.content.startswith("+help"):
-            await message.channel.send(
-                "Commands:\n"
-                "+play <keywords>: Plays the first result of a youtube search\n"
-                "+url <url>: Plays the audio of the video from the url\n"
-                "+stop: Stops the audio\n"
-                "+pause: Pauses the audio\n"
-                "+resume: Resumes the audio\n"
-                "+queue: Shows the queue\n"
-                "+skip: Skips the current song\n"
-                "+help: Shows this message\n"
-                "+loop: Loops the current song\n"
-                "+ramranch: Plays Ram Ranch\n"
-                "+chat: Starts a conversation with the chatbot\n"
-                "+newchat: Starts a new conversation with the chatbot\n"
-            )
-        elif message.content.startswith("+"):
+        for command, function in self.commands.items():
+            if message.content.startswith(command):
+                await function(message)
+                return
+
+        if message.content.startswith("+"):
             await message.channel.send(
                 "Was that meant to be a command? Because if that's the case, maaaan I have no idea what you are waiting for me to do :/"
             )
+        return
 
     async def chat(self, message):
         """
@@ -240,15 +180,18 @@ class YTBot(discord.Client):
 
         self.add_to_queue(url)
 
-    async def play_audio(self, message, keywords):
+    async def handle_play(self, message):
         """
-        Play the audio from the first result of a youtube search.
+        Handle the play command.
 
         Args:
             message (discord.Message): The message received.
-            keywords (str): The keywords to search for.
         """
-        url = self.search_for(keywords)
+        msg = message.content[5:]
+        if msg.startswith("https://"):
+            await self.play_url(message, msg)
+            return
+        url = self.search_for(msg)
 
         if url is None:
             await message.channel.send(
@@ -260,9 +203,28 @@ class YTBot(discord.Client):
 
         await self.play_url(message, url)
 
-    async def stop_audio(self, message):
+    async def handle_url(self, message):
         """
-        Stop the audio.
+        Handle the url command.
+
+        Args:
+            message (discord.Message): The message received.
+        """
+        url = message.content[4:]
+        if (
+            not str(url)
+            .replace(" ", "")
+            .startswith(("https://www.youtube.com/", "https://youtu.be/"))
+        ):
+            await message.channel.send(
+                "Invalid url! (Try using +play <keywords>)"
+            )
+        else:
+            await self.play_url(message, url)
+
+    async def handle_stop(self, message):
+        """
+        Handle the stop command.
 
         Args:
             message (discord.Message): The message received.
@@ -270,6 +232,153 @@ class YTBot(discord.Client):
         if self.voice_client:
             self.voice_client.stop()
             await message.channel.send("Stopped!")
+
+    async def handle_pause(self, message):
+        """
+        Handle the pause command.
+
+        Args:
+            message (discord.Message): The message received.
+        """
+        if self.voice_client:
+            self.voice_client.pause()
+            await message.channel.send("Paused!")
+
+    async def handle_resume(self, message):
+        """
+        Handle the resume command.
+
+        Args:
+            message (discord.Message): The message received.
+        """
+        if self.voice_client:
+            self.voice_client.resume()
+            await message.channel.send("Resumed!")
+
+    async def handle_queue(self, message):
+        """
+        Handle the queue command.
+
+        Args:
+            message (discord.Message): The message received.
+        """
+        if len(self.queue) == 0:
+            await message.channel.send("Queue is empty!")
+        else:
+            await message.channel.send(
+                "Queue: "
+                + str(self.queue)
+                .replace(",", "\n")
+                .replace("[", "")
+                .replace("]", "")
+            )
+
+    async def handle_loop(self, message):
+        """
+        Handle the loop command.
+
+        Args:
+            message (discord.Message): The message received.
+        """
+        if self.loop_audio:
+            self.loop_audio = False
+            await message.channel.send("Looping disabled!")
+        else:
+            self.loop_audio = True
+            await message.channel.send("Looping enabled!")
+
+    async def handle_skip(self, message):
+        """
+        Handle the skip command.
+
+        Args:
+            message (discord.Message): The message received.
+        """
+        if self.voice_client:
+            self.voice_client.stop()
+            self.loop_audio = False
+            await message.channel.send("Skipped!")
+
+    async def handle_ramranch(self, message):
+        """
+        Handle the ramranch command.
+
+        Args:
+            message (discord.Message): The message received.
+        """
+        await message.channel.send(
+            "18 naked cowboys in the showers at Ram Ranch!\n"
+            "Big hard throbbing cocks wanting to be sucked!\n"
+        )
+        await self.play_url(
+            message,
+            "https://www.youtube.com/watch?v=39lPHHvkzYg&pp=ygUJcmFtIHJhbmNo",
+        )
+
+    async def handle_chat(self, message):
+        """
+        Handle the chat command.
+
+        Args:
+            message (discord.Message): The message received.
+        """
+        await self.chat(message)
+
+    async def handle_new_chat(self, message):
+        """
+        Handle the new chat command.
+
+        Args:
+            message (discord.Message): The message received.
+        """
+        await self.new_chat(message)
+
+    async def handle_delete_chats(self, message):
+        """
+        Handle the delete chats command.
+
+        Args:
+            message (discord.Message): The message received.
+        """
+        await self.delete_chats(message)
+
+    async def handle_help(self, message):
+        """
+        Handle the help command.
+
+        Args:
+            message (discord.Message): The message received.
+        """
+        await message.channel.send(
+            "Commands:\n"
+            "+play <keywords>: Plays the first result of a youtube search\n"
+            "+url <url>: Plays the audio of the video from the url\n"
+            "+stop: Stops the audio\n"
+            "+pause: Pauses the audio\n"
+            "+resume: Resumes the audio\n"
+            "+queue: Shows the queue\n"
+            "+skip: Skips the current song\n"
+            "+help: Shows this message\n"
+            "+loop: Loops the current song\n"
+            "+ramranch: Plays Ram Ranch!\n"
+            "+chat: Starts a conversation with the chatbot\n"
+            "+newchat: Starts a new conversation with the chatbot\n"
+        )
+
+    async def handle_playlist(self, message):
+        """
+        Handle the playlist command.
+
+        Args:
+            message (discord.Message): The message received.
+        """
+        p = pytube.Playlist(message.content[10:])
+        if p is None:
+            await message.channel.send("Invalid playlist sorry :(")
+            return
+        urls = p.video_urls
+        for url in urls:
+            await self.play_url(message, url)
 
     def add_to_queue(self, url):
         """
@@ -290,31 +399,17 @@ class YTBot(discord.Client):
         """
         if len(self.queue) == 0:
             return
-        url = self.queue[0]
-        self.queue = self.queue[1:]
-        self.play_queue(url)
-
-    def play_queue(self, url):
-        """
-        Play the audio from the url.
-
-        Args:
-            url (str): The url of the audio to be played.
-        """
+        url = self.queue.pop(0)
+        if self.loop_audio:
+            self.queue.insert(0, url)
         if self.voice_client:
             audio = self.url_to_stream(url)
             if audio is None:
                 return
-            if self.loop_audio:
-                self.voice_client.play(
-                    discord.FFmpegPCMAudio(audio, executable="ffmpeg"),
-                    after=lambda e: self.play_queue(url),
-                )
-            else:
-                self.voice_client.play(
-                    discord.FFmpegPCMAudio(audio, executable="ffmpeg"),
-                    after=lambda e: self.play_next(),
-                )
+            self.voice_client.play(
+                discord.FFmpegPCMAudio(audio, executable="ffmpeg"),
+                after=lambda e: self.play_next(),
+            )
 
     def url_to_stream(self, url):
         """
@@ -351,9 +446,9 @@ class YTBot(discord.Client):
             str: The url of the first result.
         """
         s = pytube.Search(keywords)
-        if s is None or len(s.results) == 0:
+        if s is None or len(s.videos) == 0:
             return None
-        return str(s.results[0].watch_url)
+        return str(s.videos[0].watch_url)
 
     def create_chatbot(self, credentials):
         """
